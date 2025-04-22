@@ -5,14 +5,18 @@ data class Player(
     var hand: MutableList<Card> = mutableListOf(),
     var score: Int = 0,
     var status: PlayerStatus = PlayerStatus.PENDING,
-    var hasTurn: Boolean = false
+    var hasTurn: Boolean = false,
+    // Flags de estado para el turno y cambios
+    var hasPassed: Boolean = false,
+    var simpleExchangeUsed: Boolean = false,
+    var fullExchangeUsed: Boolean = false,
+    var lastRound: Boolean = false,
+    // Cartas seleccionadas (para cambio simple)
+    var selectedIndices: MutableSet<Int> = mutableSetOf()
 ) {
 
     /**
      * Intercambia UNA o TODAS las cartas con la viuda.
-     * - Si [indexes] tiene tamaño 1, se cambia una carta.
-     * - Si [indexes] tiene tamaño 5, se cambian todas.
-     * - Cualquier otro número lanza excepción.
      */
     fun exchangeWithWidow(indexes: List<Int>, widowCards: MutableList<Card>): List<Card> {
         require(indexes.size == 1 || indexes.size == 5) {
@@ -34,11 +38,45 @@ data class Player(
         return returnedToWidow
     }
 
+    /**
+     * Intercambio simple usando las cartas seleccionadas.
+     */
+    fun intercambiarSimple(widowCards: MutableList<Card>): List<Card> {
+        require(selectedIndices.size == 1) { "Debe haber exactamente una carta seleccionada para el cambio simple." }
+        return exchangeWithWidow(selectedIndices.toList(), widowCards)
+    }
+
+    /**
+     * Intercambio completo (todas las cartas).
+     */
+    fun intercambiarTotal(widowCards: MutableList<Card>): List<Card> {
+        return exchangeWithWidow(hand.indices.toList(), widowCards)
+    }
+
+    /**
+     * Alterna la selección de una carta.
+     */
+    fun toggleCardSelection(index: Int) {
+        if (selectedIndices.contains(index)) {
+            selectedIndices.remove(index)
+        } else {
+            selectedIndices.add(index)
+        }
+    }
+
+    /**
+     * Resetea el estado del jugador para una nueva partida.
+     */
     fun resetPlayer() {
         hand.clear()
         score = 0
         status = PlayerStatus.PENDING
         hasTurn = false
+        hasPassed = false
+        simpleExchangeUsed = false
+        fullExchangeUsed = false
+        lastRound = false
+        selectedIndices.clear()
     }
 
     fun handToString(): String {

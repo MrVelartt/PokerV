@@ -3,7 +3,8 @@ package com.velarttdesign.pokerv.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -16,9 +17,16 @@ import androidx.compose.ui.unit.dp
 import com.velarttdesign.pokerv.models.Card as PokerCard
 import com.velarttdesign.pokerv.R
 
+/**
+ * CartaView muestra una carta de poker y soporta:
+ * - Modo boca abajo (faceDown): muestra el dorso de la carta.
+ * - Estado seleccionado: resalta con borde.
+ * - Callback onClick cuando es clickable.
+ */
 @Composable
 fun CartaView(
     carta: PokerCard,
+    faceDown: Boolean = false,
     isSelected: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
@@ -32,10 +40,15 @@ fun CartaView(
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            val imageResId = carta.getDrawableResId()
+            val imageRes = if (faceDown) {
+                // Imagen de dorso de carta (asegúrate de tener este recurso en drawables)
+                R.drawable.card_back
+            } else {
+                carta.getDrawableResId()
+            }
             Image(
-                painter = painterResource(id = imageResId),
-                contentDescription = carta.toString()
+                painter = painterResource(id = imageRes),
+                contentDescription = if (faceDown) "Carta boca abajo" else carta.toString()
             )
         }
     }

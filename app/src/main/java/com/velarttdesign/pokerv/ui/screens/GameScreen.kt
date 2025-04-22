@@ -25,13 +25,7 @@ fun GameScreen(navController: NavController) {
     var resultado by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        gameManager.repartirCartas()
-        val comp = gameManager.compararManos(gameManager.players[0], gameManager.players[1])
-        resultado = when {
-            comp > 0 -> "${gameManager.players[0].name} gana!"
-            comp < 0 -> "${gameManager.players[1].name} gana!"
-            else -> "Empate!"
-        }
+        gameManager.resetGame()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -76,21 +70,71 @@ fun GameScreen(navController: NavController) {
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            gameManager.players.forEach { jugador ->
-                JugadorManoView(jugador = jugador)
-                Spacer(modifier = Modifier.height(16.dp))
+            // Mostrar mano del jugador actual
+            JugadorManoView(
+                jugador = gameManager.currentPlayer,
+                isCurrent = true,
+                gameManager = gameManager
+            )
+
+            // Mostrar la Viuda (boca abajo si no ha sido abierta)
+            JugadorManoView(
+                jugador = gameManager.viuda,
+                isViuda = true,
+                widowOpen = gameManager.widowOpen,
+                gameManager = gameManager
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = { gameManager.abrirViuda() },
+                    enabled = !gameManager.widowOpen && !gameManager.currentPlayer.hasPassed,
+                ) {
+                    Text("Abrir Viuda")
+                }
+
+                Button(
+                    onClick = { gameManager.intercambiarSimple() },
+                    enabled = gameManager.widowOpen && !gameManager.currentPlayer.simpleExchangeUsed,
+                ) {
+                    Text("Cambio Simple")
+                }
+
+                Button(
+                    onClick = { gameManager.intercambiarTotal() },
+                    enabled = gameManager.widowOpen && !gameManager.currentPlayer.fullExchangeUsed,
+                ) {
+                    Text("Cambio Total")
+                }
             }
 
             Button(
-                onClick = { gameManager.intercambiarConViuda() },
-                enabled = gameManager.esTurnoDe(gameManager.currentPlayer) && gameManager.currentPlayer != gameManager.viuda,
+                onClick = { gameManager.marcarUltimaMano() },
+                enabled = gameManager.widowOpen && !gameManager.currentPlayer.lastRound,
                 modifier = Modifier.padding(top = 8.dp)
             ) {
-                Text("Intercambiar con la Viuda")
+                Text("Última Mano")
             }
 
             Button(
-                onClick = { gameManager.avanzarTurno() },
+                onClick = {
+                    gameManager.pasarTurno()
+                    if (gameManager.isEndOfGame()) {
+                        val comp = gameManager.compararManos(
+                            gameManager.players[0], gameManager.players[1]
+                        )
+                        resultado = when {
+                            comp > 0 -> "${gameManager.players[0].name} gana!"
+                            comp < 0 -> "${gameManager.players[1].name} gana!"
+                            else -> "Empate!"
+                        }
+                    }
+                },
                 modifier = Modifier.padding(top = 8.dp)
             ) {
                 Text("Siguiente Turno")
@@ -107,24 +151,43 @@ fun GameScreen(navController: NavController) {
         }
     }
 }
-
-// 👇 FUNCIONES MOVIDAS FUERA DE GameScreen
-
 @Composable
-fun JugadorManoView(jugador: Player) {
+fun JugadorManoView(
+    jugador: Player,
+    isCurrent: Boolean = false,
+    isViuda: Boolean = false,
+    widowOpen: Boolean = false,
+    gameManager: GameManager
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = jugador.name,
             style = MaterialTheme.typography.headlineSmall,
-            color = Color.White
+            color = if (isViuda) Color.Gray else Color.White
         )
+
         LazyRow(modifier = Modifier.padding(vertical = 8.dp)) {
-            items(jugador.hand) { card ->
-                CartaView(carta = card, modifier = Modifier.padding(4.dp))
+            items(jugador.hand.indices.toList()) { index ->
+                val card = jugador.hand[index]
+                val isSelected = jugador.selectedIndices.contains(index)
+                val showFace = !isViuda || widowOpen
+
+                CartaView(
+                    carta = card,
+                    faceDown = !showFace, // <-- pasa la propiedad acá
+                    isSelected = isSelected,
+                    onClick = {
+                        if (isCurrent || (isViuda && widowOpen)) {
+                            gameManager.toggleCardSelection(jugador, index)
+                        }
+                    },
+                    modifier = Modifier.padding(4.dp)
+                )
             }
         }
     }
 }
+
 
 @Composable
 fun SmallButton(text: String, onClick: () -> Unit) {

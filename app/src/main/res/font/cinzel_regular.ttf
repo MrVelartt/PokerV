@@ -1,0 +1,6 @@
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+
+val customFont = FontFamily(
+    Font(R.font.cinzel_regular)
+)
